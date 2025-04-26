@@ -1,4 +1,4 @@
-interface IBasketModel {
+export interface IBasketModel {
     items: Map<string, number>;
     total: number;
     add(id: string): void;
@@ -7,14 +7,14 @@ interface IBasketModel {
     getTotal(): number;
 }
 
-interface IBasketItemViewData {
+export interface IBasketItemViewData {
     id: string;
     title: string;
     price: string;
     count: number;
 }
 
-interface IBasketViewData {
+export interface IBasketViewData {
     items: HTMLElement[];
     total: string;
 }

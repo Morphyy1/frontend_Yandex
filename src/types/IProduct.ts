@@ -1,4 +1,4 @@
-interface IProduct {
+export interface IProduct {
     id: string;
     title: string;
     price: number | null; // null для "бесценных" товаров
@@ -7,6 +7,6 @@ interface IProduct {
     category: string;
 }
 
-interface IProductPreview extends Pick<IProduct, 'id' | 'title' | 'price'> {
+export interface IProductPreview extends Pick<IProduct, 'id' | 'title' | 'price'> {
     
 }
