@@ -1,52 +1,34 @@
-import { Events, IPaymentType } from '../types';
+import { Events, IPayType, IOrderDeliveryForm} from '../types';
 import { ensureElement } from '../utils/utils';
 import { IEvents } from '../components/base/events';
 import { Form } from '../models/Form';
 
-interface IOrderDeliveryForm {
-	payment: IPaymentType; // способ оплаты
-	address: string; // адрес доставки
-}
+export { DeliveryForm, IOrderDeliveryForm };
 
 class DeliveryForm extends Form<IOrderDeliveryForm> {
-	protected _paymentContainer: HTMLDivElement;
-	protected _paymentButtons: HTMLButtonElement[];
+	protected _payContainer: HTMLDivElement;
+	protected _payButtons: HTMLButtonElement[];
 
-
-	/**
-	 * Базовый конструктор
-	 * @constructor
-	 * @param { HTMLFormElement } container - объект контейнера (темплейта)
-	 * @param { IEvents } events - брокер событий
-	 */
 	constructor(container: HTMLFormElement, events: IEvents) {
 		super(container, events);
 
-		// Используемые элементы на форме
-		this._paymentContainer = ensureElement<HTMLDivElement>(
+		this._payContainer = ensureElement<HTMLDivElement>(
 			'.order__buttons',
 			this.container
 		);
-		this._paymentButtons = Array.from(
-			this._paymentContainer.querySelectorAll('.button_alt')
+		this._payButtons = Array.from(
+			this._payContainer.querySelectorAll('.button_alt')
 		);
 
-		// Подвязываем события выбора кнопки с типом оплаты
-		this._paymentContainer.addEventListener('click', (e: MouseEvent) => {
+		this._payContainer.addEventListener('click', (e: MouseEvent) => {
 			const target = e.target as HTMLButtonElement;
-			// TODO: возможно тут стоит брать data-атрибут
-			this.setClassPaymentMethod(target.name);
-			events.emit(Events.SELECT_PAYMENT, { target: target.name });
+			this.setMethod(target.name);
+			events.emit(Events.PAYMENT_METHOD_CHANGED, { target: target.name });
 		});
 	}
 
-	/**
-	 * Управляем выделением кнопки в зависимости от выбранного способа оплаты
-	 * @param { string } className выбранный способ оплаты
-	 */
-	setClassPaymentMethod(className: string): void {
-		this._paymentButtons.forEach((btn) => {
-			// TODO: возможно тут сравнивать с data-атрибутом
+	setMethod(className: string): void {
+		this._payButtons.forEach((btn) => {
 			if (btn.name === className) {
 				this.toggleClass(btn, 'button_alt-active', true);
 			} else {
@@ -56,15 +38,12 @@ class DeliveryForm extends Form<IOrderDeliveryForm> {
 	}
 
 	set payment(value: string){
-		this.setClassPaymentMethod(value);
+		this.setMethod(value);
 	}
 
-	set address(value: IPaymentType) {
+	set address(value: IPayType) {
 		(this.container.elements.namedItem('address') as HTMLInputElement).value =
 			value;
 	}
-
-	// TODO: Стоит добавить метод на очистку выбора в контейнере
 }
 
-export { DeliveryForm, IOrderDeliveryForm };

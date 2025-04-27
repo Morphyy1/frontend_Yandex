@@ -1,28 +1,23 @@
-// Реализация Presenter
-
 import './scss/styles.scss';
-
-// Импорты компонентов и типов
 import { cloneTemplate, ensureElement } from './utils/utils';
 import { EventEmitter } from './components/base/events';
-import { LarekAPI } from './components/FullAPI';
+import { WebAPI } from './components/API';
 import { API_URL, CDN_URL } from './utils/constants';
 import { Page } from './models/Pages';
 import { Modal } from './models/ModalForm';
 import { Basket } from './models/BasketModel';
 import { Card } from './models/CardModel';
 import { Success } from './models/SuccessFrom';
-import { CatalogChangeEvent, Events, IFormErrors, ILot, IPaymentType } from './types';
+import { ICatalogChangeEvent, Events, IFormErrors, ILot, IPayType } from './types';
 import { AppState } from './models/AppState';
 import { DeliveryForm } from './models/DeliveryForm';
 import { ContactsForm } from './models/ContactsForm';
 import { BasketItem } from './models/BasketItems';
 
-// Создаём объект events и объект API
-const api = new LarekAPI(CDN_URL, API_URL);
+
+const api = new WebAPI(CDN_URL, API_URL);
 const events = new EventEmitter();
 
-// Все шаблоны
 const cardCatalogTemplate = ensureElement<HTMLTemplateElement>('#card-catalog');
 const cardPreviewTemplate = ensureElement<HTMLTemplateElement>('#card-preview');
 
@@ -33,26 +28,24 @@ const deliveryTemplate = ensureElement<HTMLTemplateElement>('#order');
 const contactsTemplate = ensureElement<HTMLTemplateElement>('#contacts');
 const successTemplate = ensureElement<HTMLTemplateElement>('#success');
 
-// Объект Model
+
 const appData = new AppState({}, events);
 
-// Глобальные View-контейнеры
+
 const page = new Page(document.body, events);
 const modal = new Modal(ensureElement<HTMLElement>('#modal-container'), events);
 
-// Переиспользуемые части интерфейса
+
 const basket = new Basket(cloneTemplate(basketTemplate), events);
 const deliveryForm = new DeliveryForm(cloneTemplate(deliveryTemplate), events);
 const contactsForm = new ContactsForm(cloneTemplate(contactsTemplate), events);
 
-// Бизнес-логика
 
-// Обновили доступные лоты
-events.on<CatalogChangeEvent>(Events.LOAD_LOTS, () => {
+events.on<ICatalogChangeEvent>(Events.CATALOG_UPDATED, () => {
 	// Отрисовываем каждую карточку
 	page.galery = appData.catalog.map((item) => {
 		const card = new Card('card', cloneTemplate(cardCatalogTemplate), events, {
-			onClick: () => events.emit(Events.OPEN_LOT, item),
+			onClick: () => events.emit(Events.LOT_OPENED, item),
 		});
 		return card.render({
 			category: item.category,
@@ -63,18 +56,16 @@ events.on<CatalogChangeEvent>(Events.LOAD_LOTS, () => {
 	});
 });
 
-// Открыли корзину
-events.on(Events.OPEN_BASKET, () => {
+
+events.on(Events.BASKET_OPENED, () => {
 	modal.render({
 		content: basket.render({
-			valid: appData.getBasketLength() > 0
+			validation: appData.getBasketLength() > 0
 		}),
 	});
 });
 
-// Открыли модалку карточки
-events.on(Events.OPEN_LOT, (item: ILot) => {
-	// Отображаем результат
+events.on(Events.LOT_OPENED, (item: ILot) => {
 	const card = new Card('card', cloneTemplate(cardPreviewTemplate), events, {
 		onClick: () => {
 			if (appData.isLotInBasket(item)) {
@@ -82,7 +73,7 @@ events.on(Events.OPEN_LOT, (item: ILot) => {
 			} else {
 				item.placeInBasket();
 			}
-			events.emit(Events.OPEN_LOT, item);
+			events.emit(Events.LOT_OPENED, item);
 		},
 	});
 
@@ -98,15 +89,14 @@ events.on(Events.OPEN_LOT, (item: ILot) => {
 	});
 });
 
-// Любые изменения в любом из лотов
-events.on(Events.CHANGE_LOT_IN_BASKET, () => {
+events.on(Events.LOT_IN_BASKET_UPDATED, () => {
 	page.counter = appData.getBasketLength();
 
 	basket.items = appData.basket.map((item, index) => {
 		const card = new BasketItem(cloneTemplate(cardBasketTemplate), events, {
 			onClick: (event) => {
 				item.removeFromBasket();  // TODO: может стоит вызывать event, а не метод
-				events.emit(Events.OPEN_BASKET);
+				events.emit(Events.BASKET_OPENED);
 			},
 		});
 		return card.render({
@@ -119,8 +109,7 @@ events.on(Events.CHANGE_LOT_IN_BASKET, () => {
 	basket.total = appData.getTotalAmount();
 });
 
-// Открываем первую форму
-events.on(Events.OPEN_FIRST_ORDER_PART, () => {
+events.on(Events.PAYMENT_STEP_OPENED, () => {
 	const order = appData.initOrder();
 	modal.render({
 		content: deliveryForm.render({
@@ -132,29 +121,23 @@ events.on(Events.OPEN_FIRST_ORDER_PART, () => {
 	});
 });
 
-// Изменили способ оплаты
-events.on(Events.SELECT_PAYMENT, (data: { target: string }) => {
-	appData.order.payment = data.target as IPaymentType;
+events.on(Events.PAYMENT_METHOD_CHANGED, (data: { target: string }) => {
+	appData.order.payment = data.target as IPayType;
 });
 
-// Изменился адрес доставки
-events.on(Events.INPUT_ORDER_ADDRESS, (data: { value: string }) => {
+events.on(Events.ADDRESS_CHANGED, (data: { value: string }) => {
 	appData.order.address = data.value;
 });
 
-// Изменилась почта
-events.on(Events.INPUT_ORDER_EMAIL, (data: { value: string }) => {
+events.on(Events.EMAIL_CHANGED, (data: { value: string }) => {
 	appData.order.email = data.value;
 });
 
-// Изменился телефон
-events.on(Events.INPUT_ORDER_PHONE, (data: { value: string }) => {
+events.on(Events.PHONE_CHANGED, (data: { value: string }) => {
 	appData.order.phone = data.value;
 });
 
-// Изменилось состояние валидации формы доставки
-events.on(Events.VALIDATE_ORDER, (errors: Partial<IFormErrors>) => {
-	// TODO: Лучше разнести
+events.on(Events.ORDER_VALIDATED, (errors: Partial<IFormErrors>) => {
 	const { payment, address, email, phone } = errors;
 	deliveryForm.valid = !payment && !address;
 	contactsForm.valid = !email && !phone;
@@ -166,13 +149,11 @@ events.on(Events.VALIDATE_ORDER, (errors: Partial<IFormErrors>) => {
 		.join('; ');
 });
 
-// Заполнили первую форму оплаты
-events.on(Events.FINISH_FIRST_ORDER_PART, () => {
-	events.emit(Events.OPEN_SECOND_ORDER_PART);
+events.on(Events.PAYMENT_STEP_COMPLETED, () => {
+	events.emit(Events.CONTACTS_STEP_OPENED);
 });
 
-// Открываем вторую форму
-events.on(Events.OPEN_SECOND_ORDER_PART, () => {
+events.on(Events.CONTACTS_STEP_OPENED, () => {
 	const order = appData.order;
 	modal.render({
 		content: contactsForm.render({
@@ -184,12 +165,11 @@ events.on(Events.OPEN_SECOND_ORDER_PART, () => {
 	});
 });
 
-events.on(Events.FINISH_SECOND_ORDER_PART, () => {
+events.on(Events.CONTACTS_STEP_COMPLETED, () => {
 	const order = appData.order;
 
 	api
 		.postOrderLots(
-			// TODO: Лучше переделать
 			{
 				payment: order.payment,
 				address: order.address,
@@ -212,7 +192,6 @@ events.on(Events.FINISH_SECOND_ORDER_PART, () => {
 				}),
 			});
 
-			// Очищаем корзину сразу
 			appData.clearBasket();
 		})
 		.catch((err) => {
@@ -220,22 +199,14 @@ events.on(Events.FINISH_SECOND_ORDER_PART, () => {
 		});
 });
 
-// TODO: лучше взять такой подход из "оно тебе надо" для отслеживания изменения полей
-// events.on(/^order\..*:change/, (data: { field: keyof IOrderForm, value: string }) => {
-//     appData.order.set(data.field, data.value);
-// });
-
-// Блокируем прокрутку страницы при открытии модалки
-events.on(Events.OPEN_MODAL, () => {
+events.on(Events.MODAL_OPENED, () => {
 	page.locked = true;
 });
 
-// Разблокируем прокрутку страницы при закрытии модалки
-events.on(Events.CLOSE_MODAL, () => {
+events.on(Events.MODAL_CLOSED, () => {
 	page.locked = false;
 });
 
-// Инициализируем первоначальную подгрузку лотов
 api
 	.getLotList()
 	.then((res) => {
