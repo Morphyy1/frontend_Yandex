@@ -8,8 +8,7 @@ import { Select } from '../../components/select';
 import { FormEvent, useRef, useState } from 'react';
 import clsx from 'clsx';
 import styles from './ArticleParamsForm.module.scss';
-import {OptionType, backgroundColors, contentWidthArr, defaultArticleState, fontColors, fontFamilyOptions, fontSizeOptions} 
-from 'src/constants/articleProps';
+import {OptionType, backgroundColors, contentWidthArr, defaultArticleState, fontColors, fontFamilyOptions, fontSizeOptions} from 'src/constants/articleProps';
 
 
 type ArticleParams = {
