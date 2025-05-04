@@ -1,6 +1,6 @@
 import { Text } from 'components/text';
-
 import styles from './Button.module.scss';
+
 
 export const Button = ({
 	title,
